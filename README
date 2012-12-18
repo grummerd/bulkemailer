@@ -8,10 +8,13 @@ Entry point:
 Displays email addresses as they are being sent out. Errors caused by smtp server or bad email addresses.
 
 bulkemailer/web_availability.py
-Class which pings a server to see if we have a web connection before trying to attempt any fancier calls.
+Module which pings a server to see if we have a web connection before trying to attempt any fancier calls.
 
 bulkemailer/config_xml.py
-Class which interacts with the config xml file.
+Module which interacts with the config xml file.
+
+bulkemailer/egg.py
+Module for interacting with Python egg file. (File) resources are taken from the egg.
 
 bulkemailer/ui/bulkemailer.ui
 Each screen should have it's own .ui file. Edit these files using glade GUI IDE. This will be the main windows .ui file.
@@ -19,3 +22,16 @@ Each screen should have it's own .ui file. Edit these files using glade GUI IDE.
 PACKAGING FILES
 setup.py
 MANIFEST.IN
+msgfmt.py -- Converts gettext po into mo files.
+    Credit
+    # Written by Martin v. Lwis <loewis@informatik.hu-berlin.de>
+    # Plural forms support added by alexander smishlajev <alex@tycobka.lv>
+ez_setup.py -- During install if setuputils isn't installed this will install it.
+
+FOLDERS
+po -- gettext source files.
+scripts -- post and pre install scripts and uninstall scripts.
+data -- Contains config.xml, *.desktop, manual, legal docs
+data/icons -- any icons
+bulkemailer -- Python files
+bulkemailer/ui -- gtk glade .ui files.
