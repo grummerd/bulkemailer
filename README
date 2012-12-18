@@ -1,0 +1,21 @@
+Outline of bulkemailer code files. See README.md for a project description.
+
+bulkemailer/main.py
+pygtk excels at multi-process. If necessary use io_add_watch to run code without blocking gtk GUI.
+Entry point:
+1. start() Starts GUI. Features windows to edit config.xml file. In toolbar, buttons [download, about]. 
+2. process() Meant to be run in a xterm window by clicking a desktop shortcut.
+Displays email addresses as they are being sent out. Errors caused by smtp server or bad email addresses.
+
+bulkemailer/web_availability.py
+Class which pings a server to see if we have a web connection before trying to attempt any fancier calls.
+
+bulkemailer/config_xml.py
+Class which interacts with the config xml file.
+
+bulkemailer/ui/bulkemailer.ui
+Each screen should have it's own .ui file. Edit these files using glade GUI IDE. This will be the main windows .ui file.
+
+PACKAGING FILES
+setup.py
+MANIFEST.IN
