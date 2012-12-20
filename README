@@ -35,3 +35,10 @@ data -- Contains config.xml, *.desktop, manual, legal docs
 data/icons -- any icons
 bulkemailer -- Python files
 bulkemailer/ui -- gtk glade .ui files.
+
+COLLABORATORS
+Ariel Steiner (??) https://plus.google.com/u/0/117182002449151934255/about
+    Wants a Windows port
+Dave Grummer (github: grummerd) https://plus.google.com/u/0/107925684466498776198/about
+    Wrote original bulkemailer in PHP cli on puppylinux. Dependancies: eMail.
+    Wants a Linux port written in Python.
