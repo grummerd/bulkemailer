@@ -3,6 +3,10 @@
 import xml.etree.ElementTree as ET # parse xml file with mail content
 import os
 import fnmatch # help locate xml files
+import pickle # for persitence
+
+from urlparse import urlparse
+from ftplib import FTP # download bulk
 
 # Import smtplib for the actual sending function
 import smtplib
@@ -107,6 +111,7 @@ class Sender:
                 self.msg['To'] = '"' \
                     + email_to.find(u'name_encoded').text \
                     + u'" <' + email_to.attrib[u'addr'] + u'>'
+                # send the mail
                 self.s.sendmail(self.msg['From'], self.msg['To'], \
                     self.msg.as_string())
                 print self.msg.as_string()
@@ -114,8 +119,34 @@ class Sender:
         finally:
             self._finish()
 
+def download_bulk(url, user='anonymous', pw='',ext='.xml',target='.'):
+    o = urlparse(url)
+    if o.scheme != 'ftp':
+        raise ValueError('only ftp supported')
+    if o.path[-1:] != '/':
+        raise ValueError('only directories supported')
+    print 'conecting to',o.netloc
+    try:
+        ftp = FTP(o.netloc)
+        ftp.login(user,pw)
+        ftp.cwd(o.path)
+        os.chdir(targetPath)
+        for fname in ftp.nlst():
+            if fname[-len(ext):] != ext:
+                continue
+            print 'downloading',fname
+            f = open('./' + fname,'w')
+            ftp.retrbinary('RETR ' + fname, \
+                lambda chunk : f.write(chunk))
+    finally:
+        ftp.quit()
+        
+
+
 if __name__ == "__main__":
+    # test download_bulk
+    download_bulk('ftp://ftp.mozilla.org/pub/mozilla.org/firefox/releases/17.0/',\
+        ext='.asc')
     bulk = Bulk(u'.')
-    
     s = Sender(bulk)
     s.run()
