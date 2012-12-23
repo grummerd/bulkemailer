@@ -126,11 +126,12 @@ def download_bulk(url, user='anonymous', pw='',ext='.xml',target='.'):
     if o.path[-1:] != '/':
         raise ValueError('only directories supported')
     print 'conecting to',o.netloc
+    ftp = FTP()
     try:
-        ftp = FTP(o.netloc)
+        ftp.connect(o.netloc)
         ftp.login(user,pw)
         ftp.cwd(o.path)
-        os.chdir(targetPath)
+        os.chdir(target)
         for fname in ftp.nlst():
             if fname[-len(ext):] != ext:
                 continue
