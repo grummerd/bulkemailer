@@ -13,6 +13,7 @@ import smtplib
 
 # Import the email modules we'll need
 from email.mime.text import MIMEText
+import email.header # used for debugging
 
 class Bulk:
     """An abstraction for the xml files with the mail content.
@@ -21,10 +22,12 @@ class Bulk:
     def __init__(self,location):
         """Prepare a list of valid xml files in the folder
         """
+        self.loc = location
         self.xmlNames = []
-        for file in os.listdir(location):
+        for file in os.listdir(self.loc):
             if fnmatch.fnmatch(file, u'*.xml') \
-            and ET.parse(file).getroot().tag == 'email_msg':
+                and ET.parse(os.path.join(self.loc,file)) \
+                .getroot().tag == 'email_msg':
                 self.xmlNames +=[file]
             
         # todo: improve sort (this one is buggy)
@@ -32,7 +35,7 @@ class Bulk:
         
         # immediately load first file
         self.oldXmlName = self.fName = self.xmlNames[0]
-        self.root = ET.parse(self.fName)
+        self.root = ET.parse(os.path.join(self.loc, self.fName))
         
     def recepients(self):
         """Iterable list of recepients.
@@ -40,11 +43,12 @@ class Bulk:
         for xmlName in self.xmlNames:
             if xmlName != self.fName:
                 self.fName = xmlName
-                self.root = ET.parse(self.fName)
+                self.root = ET.parse(os.path.join(self.loc, self.fName))
             for email_to in self.root.findall(u'email_to'):
                 yield email_to
                 self.oldXmlName = self.fName
-            #todo: erase file (maybe not here though)
+            # assuming sending succeeded, erase XML file
+            os.remove(os.path.join(self.loc, self.fName))
         # todo: consider persistence
     
     def content(self,mailtype='text'):
@@ -90,6 +94,8 @@ class Sender:
         self.msg['Subject'] = bulk.subject()
         self.msg['From'] = u'"' + bulk.sender()['name'] + u'" ' \
             u'<' + bulk.sender()['addr'] + u'>'
+        print u'Preparing to send mail "' \
+            + email.header.decode_header(self.msg['Subject'])[0][0] +'"...'
     
     def _finish(self):
         if self.s:
@@ -112,42 +118,67 @@ class Sender:
                     + email_to.find(u'name_encoded').text \
                     + u'" <' + email_to.attrib[u'addr'] + u'>'
                 # send the mail
+                # todo: handle errors (esp. by retrying)
                 self.s.sendmail(self.msg['From'], self.msg['To'], \
                     self.msg.as_string())
-                print self.msg.as_string()
-        
+                print "sent to ", self.msg['To']
+        except Exception as e:
+            print e
         finally:
             self._finish()
 
-def download_bulk(url, user='anonymous', pw='',ext='.xml',target='.'):
-    o = urlparse(url)
-    if o.scheme != 'ftp':
-        raise ValueError('only ftp supported')
-    if o.path[-1:] != '/':
-        raise ValueError('only directories supported')
-    print 'conecting to',o.netloc
-    ftp = FTP()
-    try:
-        ftp.connect(o.netloc)
-        ftp.login(user,pw)
-        ftp.cwd(o.path)
-        os.chdir(target)
-        for fname in ftp.nlst():
-            if fname[-len(ext):] != ext:
-                continue
-            print 'downloading',fname
-            f = open('./' + fname,'w')
-            ftp.retrbinary('RETR ' + fname, \
-                lambda chunk : f.write(chunk))
-    finally:
-        ftp.quit()
+class BulkDownloader:
+    def __init__(self, url, user='anonymous', pw='', \
+        ext='.xml',target='.', crmUserId = 26):
+        self.crmUserId = crmUserId
+        self.o = urlparse(url)
+        if self.o.scheme != 'ftp':
+            raise ValueError('only ftp supported')
+        if self.o.path[-1:] != '/':
+            raise ValueError('only directories supported')
+        self.user = user
+        self.pw = pw
+        self.ext = ext
+        self.downloaded = [] # list of downloaded files
         
+        # create target path if it doesn't exist
+        if not os.access(target,os.F_OK):
+            os.makedirs(target)
+        self.target = target
+
+
+
+    def download(self):
+        ftp = FTP()
+        try:
+            print 'conecting to',self.o.netloc
+            ftp.connect(self.o.netloc)
+            ftp.login(self.user,self.pw)
+            ftp.cwd(self.o.path)
+            for fname in ftp.nlst():
+                if fname[-len(self.ext):] != self.ext:
+                    continue #only download .xml files
+                if int(fname[0:fname.find('_')]) != self.crmUserId:
+                    continue # only download files created by this user
+                
+                with open(os.path.join(self.target,fname),'w') as f:
+                    ftp.retrbinary('RETR ' + fname, lambda c : f.write(c))
+                self.downloaded += [fname]
+        finally:
+            ftp.quit()
+            
+        print 'downloaded',self.downloaded
+     
 
 
 if __name__ == "__main__":
-    # test download_bulk
-    download_bulk('ftp://ftp.mozilla.org/pub/mozilla.org/firefox/releases/17.0/',\
-        ext='.asc')
-    bulk = Bulk(u'.')
+    # download xml files of current user
+    d = BulkDownloader('ftp://ftp.servage.net/', \
+        user='baruchhashem',pw='tribal12',target=u'inbox', crmUserId=26)
+    d.download()
+    
+    # send all files in the inbox
+    bulk = Bulk(u'inbox')
     s = Sender(bulk)
     s.run()
+
