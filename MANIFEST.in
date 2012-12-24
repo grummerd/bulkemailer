@@ -1,0 +1,23 @@
+#include README
+
+#For compiling gettext *.po ->*. mo
+include msgfmt.py
+
+#So setuptools doesn't need to be installed
+include ez_setup.py
+
+include setup.py
+
+#Use This Folder structure! Once the folder exists in github un-comment.
+#recursive-include data *
+#recursive-include data/icons *
+#recursive-include po *.po
+#recursive-include bulk/ui *
+#recursive-include scripts *
+
+#Exclude development code when creating a production sdist
+#exclude bulk/db_base.py
+#exclude bulk/db_sqlite.py
+#exclude bulk/db.py
+#exclude bulk/db_test.py
+#exclude bulk/basics.py
