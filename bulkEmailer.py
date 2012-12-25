@@ -15,9 +15,41 @@ import smtplib
 from email.mime.text import MIMEText
 import email.header # used for debugging
 
+from datetime import datetime # for sorting file names
+
+import config_xml
+
+# unit testing
+import doctest
+
 class Bulk:
     """An abstraction for the xml files with the mail content.
     """
+    
+    class XmlFname(str):
+        """ Utility class for comparing xml file names.
+        
+        Used when sorting a list of such xml files
+        """
+ 
+        def __lt__(self,o):
+            """ Compares two file names according to the date embedded
+            in the file name
+            
+            returns True if the left one was created before the
+            right one.
+            e.g.
+            >>> Bulk.XmlFname('2175_2012_12_13_05_52_59_de0c5040e94e41ade4a42d3738b598de.xml') < Bulk.XmlFname('2175_2012_12_12_05_52_59_de0c5040e94e41ade4a42d3738b587cd.xml')
+            False
+            >>> Bulk.XmlFname('2175_2012_12_12_05_52_59_de0c5040e94e41ade4a42d3738b587cd.xml') < Bulk.XmlFname('2175_2012_12_13_05_52_59_de0c5040e94e41ade4a42d3738b598de.xml')
+            True
+            """
+            return \
+                datetime.strptime(self[self.find('_'):self.rfind('_')], 
+                    "_%Y_%m_%d_%H_%M_%S") \
+                    < \
+                datetime.strptime(o[o.find('_'):o.rfind('_')], 
+                    "_%Y_%m_%d_%H_%M_%S")
 
     def __init__(self,location):
         """Prepare a list of valid xml files in the folder
@@ -28,9 +60,12 @@ class Bulk:
             if fnmatch.fnmatch(file, u'*.xml') \
                 and ET.parse(os.path.join(self.loc,file)) \
                 .getroot().tag == 'email_msg':
-                self.xmlNames +=[file]
-            
-        # todo: improve sort (this one is buggy)
+                self.xmlNames +=[Bulk.XmlFname(file)]
+        
+        if len(self.xmlNames) == 0:
+            raise ValueError(u"No files found")
+        
+        # sort by date (see XmlFname above)
         self.xmlNames.sort()
         
         # immediately load first file
@@ -85,6 +120,7 @@ class Bulk:
 class Sender:
     def __init__(self,bulk):
         self.bulk = bulk
+        self.s = None
                 
     def _start(self):
         self.s = smtplib.SMTP(*bulk.smtp_server())
@@ -119,8 +155,8 @@ class Sender:
                     + u'" <' + email_to.attrib[u'addr'] + u'>'
                 # send the mail
                 # todo: handle errors (esp. by retrying)
-                self.s.sendmail(self.msg['From'], self.msg['To'], \
-                    self.msg.as_string())
+                #self.s.sendmail(self.msg['From'], self.msg['To'], \
+                #    self.msg.as_string())
                 print "sent to ", self.msg['To']
         except Exception as e:
             print e
@@ -172,6 +208,8 @@ class BulkDownloader:
 
 
 if __name__ == "__main__":
+    doctest.testmod() # unit testing 
+    
     # download xml files of current user
     d = BulkDownloader('ftp://ftp.servage.net/', \
         user='baruchhashem',pw='tribal12',target=u'inbox', crmUserId=26)
@@ -181,4 +219,3 @@ if __name__ == "__main__":
     bulk = Bulk(u'inbox')
     s = Sender(bulk)
     s.run()
-
