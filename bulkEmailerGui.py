@@ -79,12 +79,15 @@ class MainWindow:
                     + email.header.decode_header(to_name.strip('"'))[0][0] 
                     + U' ' + to_addr)
     
+        except (EnvironmentError,ValueError) as e:
+            self.inform(str(e))
+        else:
+            self.inform(U'Done')
         finally:
             gobject.idle_add(gtk.Button.hide, self.stop_button)
             gobject.idle_add(gtk.Button.show, self.go_button)
             gobject.idle_add(gtk.Button.set_sensitive, self.go_button, True)
             gobject.idle_add(gtk.ProgressBar.set_fraction, self.progbar, 0.0)
-            gobject.idle_add(gtk.Label.set_text,self.stat_label,'')
 
             
     def __init__(self):
